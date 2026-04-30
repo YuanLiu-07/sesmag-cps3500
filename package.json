@@ -1,0 +1,35 @@
+{
+  "name": "sesmag2",
+  "version": "1.0.0",
+  "description": "CPS3500 SESMag HR system project",
+  "main": "api/server.js",
+  "scripts": {
+    "dev": "nodemon api/server.js",
+    "start": "node api/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "client:dev": "npm run dev --prefix client",
+    "client:build": "npm run build --prefix client"
+  },
+  "keywords": [],
+  "author": "Yuan Liu (Student ID: 1306116)",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.4.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0",
+    "zod": "^4.4.1"
+  }
+}
