@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 const API_BASE = "/api";
 
 const defaultForm = { fullName: "", email: "", password: "", role: "employee" };
+const defaultTaskForm = { title: "", description: "", assignedTo: "", dueDate: "" };
+const defaultProgressForm = { status: "in_progress", progressPercent: 0, note: "" };
 const roleStyles = {
   manager: "bg-purple-500/20 text-purple-200 ring-purple-400/30",
   hr: "bg-cyan-500/20 text-cyan-200 ring-cyan-400/30",
@@ -18,11 +20,16 @@ const RETRYABLE_MESSAGES = [
 function App() {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState(defaultForm);
+  const [taskForm, setTaskForm] = useState(defaultTaskForm);
+  const [progressDrafts, setProgressDrafts] = useState({});
   const [message, setMessage] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [notes, setNotes] = useState([]);
 
   const isAdminView = currentUser && ["hr", "manager"].includes(currentUser.role);
+  const isManager = currentUser?.role === "manager";
 
   async function request(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
@@ -73,6 +80,19 @@ function App() {
     setUsers(data.users);
   }, [isAdminView]);
 
+  const loadTasks = useCallback(async () => {
+    if (!currentUser) return;
+    if (currentUser.role === "manager") {
+      const data = await request("/tasks/all");
+      setTasks(data.tasks || []);
+      setNotes(data.notes || []);
+    } else {
+      const data = await request("/tasks/my");
+      setTasks(data.tasks || []);
+      setNotes([]);
+    }
+  }, [currentUser]);
+
   useEffect(() => {
     loadMe();
   }, [loadMe]);
@@ -80,6 +100,10 @@ function App() {
   useEffect(() => {
     loadAllUsers();
   }, [loadAllUsers]);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -109,6 +133,62 @@ function App() {
     await request("/auth/logout", { method: "POST" });
     setCurrentUser(null);
     setUsers([]);
+    setTasks([]);
+    setNotes([]);
+  }
+
+  async function handleAssignTask(event) {
+    event.preventDefault();
+    try {
+      await request("/tasks", {
+        method: "POST",
+        body: JSON.stringify({
+          title: taskForm.title,
+          description: taskForm.description,
+          assignedTo: Number(taskForm.assignedTo),
+          dueDate: taskForm.dueDate || undefined,
+        }),
+      });
+      setTaskForm(defaultTaskForm);
+      setMessage("Task assigned successfully.");
+      await loadTasks();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  function setDraft(taskId, nextValue) {
+    setProgressDrafts((prev) => ({
+      ...prev,
+      [taskId]: {
+        ...defaultProgressForm,
+        ...(prev[taskId] || {}),
+        ...nextValue,
+      },
+    }));
+  }
+
+  async function handleUpdateTask(taskId) {
+    const draft = progressDrafts[taskId] || defaultProgressForm;
+    try {
+      await request("/tasks/" + taskId + "/progress", {
+        method: "POST",
+        body: JSON.stringify({
+          status: draft.status,
+          progressPercent: Number(draft.progressPercent),
+          note: draft.note,
+        }),
+      });
+      setMessage("Progress note added.");
+      setProgressDrafts((prev) => ({ ...prev, [taskId]: defaultProgressForm }));
+      await loadTasks();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  function notesForTask(taskId) {
+    return notes.filter((item) => item.task_id === taskId).slice(0, 3);
   }
 
   return (
@@ -121,10 +201,10 @@ function App() {
                 CPS3500 Project
               </p>
               <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-                SESMag HR Portal
+                Project Manager Portal
               </h1>
               <p className="mt-3 text-sm text-zinc-300">
-                Student: Yuan Liu (1306116) | Stack: React + Express + PostgreSQL
+                CPS3500 Final Project | Manage members, tasks, and progress notes
               </p>
 
               <div className="mt-6 space-y-3 rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
@@ -135,7 +215,7 @@ function App() {
                 <p>
                   2) Password: <code className="rounded bg-black/30 px-1">Password123!</code>
                 </p>
-                <p>3) Manager/HR can view employee directory; employee has restricted access.</p>
+                <p>3) Manager can assign tasks; users update progress + notes.</p>
               </div>
 
             </div>
@@ -229,10 +309,10 @@ function App() {
               CPS3500 Project
             </p>
             <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-              SESMag HR Portal
+              Project Manager Portal
             </h1>
             <p className="mt-3 text-sm text-zinc-300">
-              Student: Yuan Liu (1306116) | Stack: React + Express + PostgreSQL
+              CPS3500 Final Project | Manage members, tasks, and progress notes
             </p>
           </header>
 
@@ -263,10 +343,54 @@ function App() {
               </div>
             </div>
 
+            {isManager && (
+              <div className="mt-5 rounded-xl border border-zinc-700/60 bg-zinc-950/50 p-4">
+                <h3 className="mb-3 font-semibold text-zinc-100">Assign New Task</h3>
+                <form className="grid gap-3 md:grid-cols-2" onSubmit={handleAssignTask}>
+                  <input
+                    className="rounded-lg border border-zinc-700 bg-zinc-950/70 p-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none ring-blue-500/40 transition focus:ring-2"
+                    placeholder="Task title"
+                    value={taskForm.title}
+                    onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  />
+                  <select
+                    className="rounded-lg border border-zinc-700 bg-zinc-950/70 p-2.5 text-sm text-zinc-100 outline-none ring-blue-500/40 transition focus:ring-2"
+                    value={taskForm.assignedTo}
+                    onChange={(e) => setTaskForm({ ...taskForm, assignedTo: e.target.value })}
+                  >
+                    <option value="">Assign to member</option>
+                    {users.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.full_name} ({member.role})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="rounded-lg border border-zinc-700 bg-zinc-950/70 p-2.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none ring-blue-500/40 transition focus:ring-2 md:col-span-2"
+                    placeholder="Task description"
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                  />
+                  <input
+                    className="rounded-lg border border-zinc-700 bg-zinc-950/70 p-2.5 text-sm text-zinc-100 outline-none ring-blue-500/40 transition focus:ring-2"
+                    type="date"
+                    value={taskForm.dueDate}
+                    onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                  />
+                  <button
+                    className="rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 p-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/50 transition hover:from-indigo-400 hover:to-purple-400"
+                    type="submit"
+                  >
+                    Assign Task
+                  </button>
+                </form>
+              </div>
+            )}
+
             {isAdminView ? (
               <div className="mt-5 overflow-x-auto">
                 <h3 className="mb-3 font-semibold text-zinc-100">
-                  Employee Directory (Visible to HR/Manager)
+                  Team Directory
                 </h3>
                 <table className="min-w-full overflow-hidden rounded-xl border border-zinc-700/60 text-left text-sm">
                   <thead className="bg-zinc-900/90 text-zinc-300">
@@ -301,9 +425,98 @@ function App() {
               </div>
             ) : (
               <p className="mt-4 rounded-xl border border-zinc-700/60 bg-zinc-900/70 p-3 text-sm text-zinc-300">
-                You are in the employee role and can only access your own profile (RBAC enforced).
+                You can update your own assigned tasks with progress and notes.
               </p>
             )}
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl">
+            <h3 className="mb-3 font-semibold text-zinc-100">
+              {isManager ? "All Project Tasks" : "My Assigned Tasks"}
+            </h3>
+            <div className="space-y-4">
+              {tasks.map((task) => {
+                const draft = progressDrafts[task.id] || defaultProgressForm;
+                const taskNotes = notesForTask(task.id);
+                const canUpdate = isManager || task.assigned_to === currentUser.id;
+                return (
+                  <article
+                    key={task.id}
+                    className="rounded-xl border border-zinc-700/60 bg-zinc-950/60 p-4 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="font-semibold text-zinc-100">{task.title}</h4>
+                      <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-200 ring-1 ring-zinc-600">
+                        {task.status} | {task.progress_percent}%
+                      </span>
+                    </div>
+                    <p className="mt-2 text-zinc-300">{task.description || "No description."}</p>
+                    <p className="mt-2 text-xs text-zinc-400">
+                      Assigned to: {task.assigned_to_name} | Due: {task.due_date || "No due date"}
+                    </p>
+
+                    {canUpdate && (
+                      <div className="mt-3 grid gap-2 md:grid-cols-3">
+                        <select
+                          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-100"
+                          value={draft.status}
+                          onChange={(e) => setDraft(task.id, { status: e.target.value })}
+                        >
+                          <option value="todo">todo</option>
+                          <option value="in_progress">in_progress</option>
+                          <option value="blocked">blocked</option>
+                          <option value="done">done</option>
+                        </select>
+                        <input
+                          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-100"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={draft.progressPercent}
+                          onChange={(e) => setDraft(task.id, { progressPercent: e.target.value })}
+                          placeholder="Progress %"
+                        />
+                        <button
+                          className="rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white hover:bg-blue-500"
+                          type="button"
+                          onClick={() => handleUpdateTask(task.id)}
+                        >
+                          Update Progress
+                        </button>
+                        <textarea
+                          className="rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-zinc-100 md:col-span-3"
+                          rows="2"
+                          value={draft.note}
+                          onChange={(e) => setDraft(task.id, { note: e.target.value })}
+                          placeholder="Add note: what did you complete, blockers, next step..."
+                        />
+                      </div>
+                    )}
+
+                    {isManager && taskNotes.length > 0 && (
+                      <div className="mt-3 rounded-lg border border-zinc-700/60 bg-zinc-900/70 p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                          Latest Notes
+                        </p>
+                        <div className="space-y-2">
+                          {taskNotes.map((item) => (
+                            <div key={item.id} className="text-xs text-zinc-300">
+                              <span className="font-semibold text-zinc-100">{item.full_name}:</span>{" "}
+                              {item.note} ({item.progress_percent ?? "n/a"}%)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+              {tasks.length === 0 && (
+                <p className="rounded-xl border border-zinc-700/60 bg-zinc-900/70 p-4 text-sm text-zinc-300">
+                  No tasks yet. {isManager ? "Assign a task to start tracking progress." : "Ask your manager to assign tasks."}
+                </p>
+              )}
+            </div>
           </section>
         </div>
       )}
