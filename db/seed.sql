@@ -4,7 +4,7 @@ VALUES
   (
     'Yuan Liu',
     'yuan.liu@example.com',
-    '$2b$12$L0Qf0TkPG4eHeBf4FD4rg.CW97z8wM/i7m4MUb8RhxPFfY2qM2N/C',
+    '$2b$12$daAouV9OBCtt2bwkNz9uxeTGsnXXS8FhqAT4yLpbm5w97G000aInm',
     'manager',
     '555-100-1000',
     'Project owner for CPS3500 SESMag assignment.'
@@ -12,7 +12,7 @@ VALUES
   (
     'Alex Employee',
     'alex.employee@example.com',
-    '$2b$12$L0Qf0TkPG4eHeBf4FD4rg.CW97z8wM/i7m4MUb8RhxPFfY2qM2N/C',
+    '$2b$12$daAouV9OBCtt2bwkNz9uxeTGsnXXS8FhqAT4yLpbm5w97G000aInm',
     'employee',
     '555-200-2000',
     'Employee profile sample.'
@@ -20,7 +20,7 @@ VALUES
   (
     'Hannah HR',
     'hannah.hr@example.com',
-    '$2b$12$L0Qf0TkPG4eHeBf4FD4rg.CW97z8wM/i7m4MUb8RhxPFfY2qM2N/C',
+    '$2b$12$daAouV9OBCtt2bwkNz9uxeTGsnXXS8FhqAT4yLpbm5w97G000aInm',
     'hr',
     '555-300-3000',
     'HR sample account.'
