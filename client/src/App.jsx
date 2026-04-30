@@ -61,14 +61,14 @@ function App() {
           method: "POST",
           body: JSON.stringify(form),
         });
-        setMessage("注册成功，请登录。");
+        setMessage("Registration successful. Please sign in.");
         setMode("login");
       } else {
         await request("/auth/login", {
           method: "POST",
           body: JSON.stringify({ email: form.email, password: form.password }),
         });
-        setMessage("登录成功。");
+        setMessage("Sign in successful.");
         await loadMe();
       }
     } catch (error) {
@@ -99,13 +99,13 @@ function App() {
                 className={`rounded px-4 py-2 ${mode === "login" ? "bg-slate-900 text-white" : "bg-slate-200"}`}
                 onClick={() => setMode("login")}
               >
-                登录
+                Sign In
               </button>
               <button
                 className={`rounded px-4 py-2 ${mode === "register" ? "bg-slate-900 text-white" : "bg-slate-200"}`}
                 onClick={() => setMode("register")}
               >
-                注册
+                Register
               </button>
             </div>
 
@@ -144,7 +144,7 @@ function App() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
               <button className="rounded bg-blue-600 p-2 font-medium text-white" type="submit">
-                {mode === "register" ? "创建账号" : "登录系统"}
+                {mode === "register" ? "Create Account" : "Sign In"}
               </button>
             </form>
             {message && <p className="mt-3 text-sm text-indigo-700">{message}</p>}
@@ -155,19 +155,19 @@ function App() {
           <section className="rounded-xl bg-white p-6 shadow">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold">欢迎，{currentUser.fullName}</h2>
+                <h2 className="text-xl font-semibold">Welcome, {currentUser.fullName}</h2>
                 <p className="text-sm text-slate-600">
-                  当前角色: <span className="font-medium">{currentUser.role}</span>
+                  Current role: <span className="font-medium">{currentUser.role}</span>
                 </p>
               </div>
               <button className="rounded bg-slate-900 px-4 py-2 text-white" onClick={handleLogout}>
-                退出登录
+                Sign Out
               </button>
             </div>
 
             {isAdminView ? (
               <div className="mt-5 overflow-x-auto">
-                <h3 className="mb-2 font-semibold">员工信息列表（HR/Manager 可见）</h3>
+                <h3 className="mb-2 font-semibold">Employee Directory (Visible to HR/Manager)</h3>
                 <table className="min-w-full border text-left text-sm">
                   <thead className="bg-slate-100">
                     <tr>
@@ -191,7 +191,7 @@ function App() {
               </div>
             ) : (
               <p className="mt-4 rounded bg-slate-100 p-3 text-sm">
-                你是 employee 角色，只能访问自己的个人资料（符合 RBAC 访问控制要求）。
+                You are in the employee role and can only access your own profile (RBAC enforced).
               </p>
             )}
           </section>
