@@ -114,12 +114,6 @@ function App() {
                 <p>3) Manager/HR can view employee directory; employee has restricted access.</p>
               </div>
 
-              <div className="mt-4 rounded-xl border border-zinc-700/60 bg-zinc-900/70 p-4 text-sm text-zinc-300">
-                <p className="font-semibold text-zinc-100">Presentation Tips</p>
-                <p className="mt-2">- Show sign in flow</p>
-                <p>- Explain RBAC behavior by role</p>
-                <p>- Open Neon + Vercel settings as deployment evidence</p>
-              </div>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl">
