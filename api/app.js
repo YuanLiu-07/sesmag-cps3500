@@ -34,8 +34,11 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ message: "Internal server error" });
+  console.error("API_ERROR", { message: err.message, code: err.code });
+  if (err && err.code && `${err.code}`.startsWith("08")) {
+    return res.status(503).json({ message: "Database is waking up. Please retry in a few seconds." });
+  }
+  return res.status(500).json({ message: "Internal server error. Please retry." });
 });
 
 module.exports = app;

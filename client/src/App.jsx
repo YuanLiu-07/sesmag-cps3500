@@ -8,6 +8,12 @@ const roleStyles = {
   hr: "bg-cyan-500/20 text-cyan-200 ring-cyan-400/30",
   employee: "bg-zinc-500/20 text-zinc-200 ring-zinc-400/30",
 };
+const RETRYABLE_MESSAGES = [
+  "Internal server error",
+  "Internal server error. Please retry.",
+  "Database is waking up. Please retry in a few seconds.",
+  "Failed to fetch",
+];
 
 function App() {
   const [mode, setMode] = useState("login");
@@ -24,9 +30,27 @@ function App() {
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       ...options,
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Request failed");
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+    if (!response.ok) throw new Error(data.message || `Request failed (${response.status})`);
     return data;
+  }
+
+  async function requestWithRetry(path, options = {}, retries = 1) {
+    try {
+      return await request(path, options);
+    } catch (error) {
+      const shouldRetry =
+        retries > 0 &&
+        RETRYABLE_MESSAGES.some((text) => `${error.message}`.includes(text));
+      if (!shouldRetry) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      return requestWithRetry(path, options, retries - 1);
+    }
   }
 
   const loadMe = useCallback(async () => {
@@ -69,10 +93,10 @@ function App() {
         setMessage("Registration successful. Please sign in.");
         setMode("login");
       } else {
-        await request("/auth/login", {
+        await requestWithRetry("/auth/login", {
           method: "POST",
           body: JSON.stringify({ email: form.email, password: form.password }),
-        });
+        }, 2);
         setMessage("Sign in successful.");
         await loadMe();
       }
