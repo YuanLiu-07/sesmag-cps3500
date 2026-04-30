@@ -27,6 +27,15 @@ function App() {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      text: "Hi, I am your Project Manager AI Copilot. Ask me about manager tasks, progress ETA, CS architecture, or presentation tips.",
+    },
+  ]);
 
   const isAdminView = currentUser && ["hr", "manager"].includes(currentUser.role);
   const isManager = currentUser?.role === "manager";
@@ -189,6 +198,33 @@ function App() {
 
   function notesForTask(taskId) {
     return notes.filter((item) => item.task_id === taskId).slice(0, 3);
+  }
+
+  async function handleSendChat(event) {
+    event.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    const userText = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", text: userText }]);
+    setChatLoading(true);
+    try {
+      const data = await request("/ai/chat", {
+        method: "POST",
+        body: JSON.stringify({ message: userText }),
+      });
+      const etaLine = data.estimate?.summary ? `\n\nETA: ${data.estimate.summary}` : "";
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: `${data.reply}${etaLine}` },
+      ]);
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: `Assistant error: ${error.message}` },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   }
 
   return (
@@ -518,6 +554,63 @@ function App() {
               )}
             </div>
           </section>
+        </div>
+      )}
+
+      {currentUser && (
+        <div className="fixed right-4 bottom-4 z-50 w-[min(420px,calc(100vw-2rem))]">
+          <div className="rounded-2xl border border-zinc-700/70 bg-zinc-950/90 shadow-2xl shadow-black/60 backdrop-blur-xl">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between rounded-t-2xl border-b border-zinc-800 px-4 py-3 text-left"
+              onClick={() => setChatOpen((prev) => !prev)}
+            >
+              <span className="text-sm font-semibold text-zinc-100">
+                AI Project Chat ({chatOpen ? "Hide" : "Show"})
+              </span>
+              <span className="text-xs text-zinc-400">
+                {isManager ? "Manager Mode" : "Member Mode"}
+              </span>
+            </button>
+            {chatOpen && (
+              <div className="space-y-3 p-3">
+                <div className="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-zinc-800 bg-black/30 p-3 text-sm">
+                  {chatMessages.map((msg, idx) => (
+                    <div
+                      key={`${msg.role}-${idx}`}
+                      className={`rounded-lg px-3 py-2 ${
+                        msg.role === "assistant"
+                          ? "bg-zinc-800/80 text-zinc-100"
+                          : "bg-blue-600/30 text-blue-100"
+                      }`}
+                    >
+                      <p className="mb-1 text-[11px] uppercase tracking-wide opacity-70">{msg.role}</p>
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <p className="text-xs text-zinc-400">Thinking about your project context...</p>
+                  )}
+                </div>
+                <form className="space-y-2" onSubmit={handleSendChat}>
+                  <textarea
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-900 p-2 text-sm text-zinc-100"
+                    rows="2"
+                    placeholder="Ask: what does a manager task mean? / estimate completion / presentation tips..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    disabled={chatLoading}
+                    className="w-full rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {chatLoading ? "Sending..." : "Send to AI Copilot"}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>

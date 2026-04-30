@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
 const tasksRouter = require("./routes/tasks");
+const aiRouter = require("./routes/ai");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/tasks", tasksRouter);
+app.use("/api/ai", aiRouter);
 
 app.use((err, _req, res, _next) => {
   console.error("API_ERROR", { message: err.message, code: err.code });
