@@ -30,6 +30,7 @@ function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatEngine, setChatEngine] = useState("unknown");
   const [chatMessages, setChatMessages] = useState([
     {
       role: "assistant",
@@ -212,6 +213,7 @@ function App() {
         method: "POST",
         body: JSON.stringify({ message: userText }),
       });
+      setChatEngine(data.engine || "unknown");
       const etaLine = data.estimate?.summary ? `\n\nETA: ${data.estimate.summary}` : "";
       setChatMessages((prev) => [
         ...prev,
@@ -569,7 +571,7 @@ function App() {
                 AI Project Chat ({chatOpen ? "Hide" : "Show"})
               </span>
               <span className="text-xs text-zinc-400">
-                {isManager ? "Manager Mode" : "Member Mode"}
+                {isManager ? "Manager Mode" : "Member Mode"} | AI: {chatEngine}
               </span>
             </button>
             {chatOpen && (

@@ -54,6 +54,30 @@ function estimateCompletion(tasks) {
 
 function localAssistantReply(message, context) {
   const lower = message.toLowerCase();
+  const memberNames = [...new Set(context.tasks.map((task) => task.assigned_to_name.toLowerCase()))];
+  const matchedMember = memberNames.find((name) => lower.includes(name.split(" ")[0]));
+  if (matchedMember) {
+    const normalized = matchedMember.toLowerCase();
+    const memberTasks = context.tasks.filter(
+      (task) => task.assigned_to_name.toLowerCase() === normalized,
+    );
+    const memberNotes = context.recentNotes.filter((note) =>
+      note.full_name.toLowerCase().includes(normalized.split(" ")[0]),
+    );
+    if (memberTasks.length === 0) {
+      return `${matchedMember} currently has no assigned tasks in the system.`;
+    }
+    const lines = memberTasks.map(
+      (task) => `- ${task.title}: ${task.status}, ${task.progress_percent}%`,
+    );
+    const noteLine =
+      memberNotes[0] &&
+      `Latest note: ${memberNotes[0].note} (${memberNotes[0].progress_percent ?? "n/a"}%).`;
+    return `${matchedMember}'s current work:\n${lines.join("\n")}${
+      noteLine ? `\n${noteLine}` : ""
+    }`;
+  }
+
   const tips = [
     "Start with project goal and user roles (manager vs member).",
     "Demo task assignment first, then member progress updates with notes.",
@@ -97,6 +121,8 @@ If user asks what manager tasks mean, clearly explain:
 - reviewing notes,
 - removing blockers,
 - coordinating delivery timeline.
+
+When user asks about a specific member (example: "what did Alex do?"), answer using context.recentNotes and context.tasks with concrete task names and progress percentages.
 `;
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -108,6 +134,7 @@ If user asks what manager tasks mean, clearly explain:
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       temperature: 0.2,
+      max_tokens: 400,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: message },
@@ -149,9 +176,11 @@ router.post("/chat", requireAuth, async (req, res, next) => {
     };
 
     let reply;
+    let engine = "fallback";
     if (process.env.OPENAI_API_KEY) {
       try {
         reply = await openAiReply(message, context);
+        engine = "openai";
       } catch {
         reply = localAssistantReply(message, context);
       }
@@ -162,6 +191,7 @@ router.post("/chat", requireAuth, async (req, res, next) => {
     return res.json({
       reply,
       estimate,
+      engine,
     });
   } catch (error) {
     if (error.name === "ZodError") {
